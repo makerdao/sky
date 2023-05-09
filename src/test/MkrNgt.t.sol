@@ -51,5 +51,31 @@ contract MkrNgtTest is DssTest {
         assertEq(mkr.totalSupply(),            800_000 * WAD);
         assertEq(ngt.balanceOf(address(this)), 200_000 * WAD * 1200);
         assertEq(ngt.totalSupply(),            200_000 * WAD * 1200);
+
+        address receiver = address(123);
+        assertEq(mkr.balanceOf(receiver),                0);
+        assertEq(ngt.balanceOf(receiver),                0);
+
+        mkr.approve(address(mkrNgt), 150_000 * WAD);
+        vm.expectEmit(true, true, true, true);
+        emit MkrToNgt(address(this), receiver, 150_000 * WAD);
+        mkrNgt.mkrToNgt(receiver, 150_000 * WAD);
+        assertEq(mkr.balanceOf(address(this)), 650_000 * WAD);
+        assertEq(mkr.balanceOf(receiver),                  0);
+        assertEq(mkr.totalSupply(),            650_000 * WAD);
+        assertEq(ngt.balanceOf(address(this)), 200_000 * WAD * 1200);
+        assertEq(ngt.balanceOf(receiver),      150_000 * WAD * 1200);
+        assertEq(ngt.totalSupply(),            350_000 * WAD * 1200);
+
+        ngt.approve(address(mkrNgt), 50_000 * WAD * 1200);
+        vm.expectEmit(true, true, true, true);
+        emit NgtToMkr(address(this), receiver, 50_000 * WAD);
+        mkrNgt.ngtToMkr(receiver, 50_000 * WAD);
+        assertEq(mkr.balanceOf(address(this)), 650_000 * WAD);
+        assertEq(mkr.balanceOf(receiver),       50_000 * WAD);
+        assertEq(mkr.totalSupply(),            700_000 * WAD);
+        assertEq(ngt.balanceOf(address(this)), 150_000 * WAD * 1200);
+        assertEq(ngt.balanceOf(receiver),      150_000 * WAD * 1200);
+        assertEq(ngt.totalSupply(),            300_000 * WAD * 1200);
     }
 }
