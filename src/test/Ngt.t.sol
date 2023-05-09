@@ -91,6 +91,33 @@ contract NgtTest is DssTest {
         assertEq(ngt.balanceOf(address(0xBEEF)), 0.1e18);
     }
 
+    function testBurnDifferentFrom() public {
+        ngt.mint(address(0xBEEF), 1e18);
+
+        assertEq(ngt.allowance(address(0xBEEF), address(this)), 0);
+        vm.prank(address(0xBEEF));
+        ngt.approve(address(this), 0.4e18);
+        assertEq(ngt.allowance(address(0xBEEF), address(this)), 0.4e18);
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(address(0xBEEF), address(0), 0.4e18);
+        ngt.burn(address(0xBEEF), 0.4e18);
+        assertEq(ngt.allowance(address(0xBEEF), address(this)), 0);
+
+        assertEq(ngt.totalSupply(), 1e18 - 0.4e18);
+        assertEq(ngt.balanceOf(address(0xBEEF)), 0.6e18);
+
+        vm.prank(address(0xBEEF));
+        ngt.approve(address(this), type(uint256).max);
+        assertEq(ngt.allowance(address(0xBEEF), address(this)), type(uint256).max);
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(address(0xBEEF), address(0), 0.4e18);
+        ngt.burn(address(0xBEEF), 0.4e18);
+        assertEq(ngt.allowance(address(0xBEEF), address(this)), type(uint256).max);
+
+        assertEq(ngt.totalSupply(), 0.6e18 - 0.4e18);
+        assertEq(ngt.balanceOf(address(0xBEEF)), 0.2e18);
+    }
+
     function testApprove() public {
         vm.expectEmit(true, true, true, true);
         emit Approval(address(this), address(0xBEEF), 1e18);
