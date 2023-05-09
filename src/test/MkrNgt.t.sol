@@ -14,6 +14,9 @@ contract MkrNgtTest is DssTest {
     Ngt     ngt;
     MkrNgt  mkrNgt;
 
+    event MkrToNgt(address indexed caller, address indexed usr, uint256 wad);
+    event NgtToMkr(address indexed caller, address indexed usr, uint256 wad);
+
     function setUp() public {
         mkr = new Mkr();
         ngt = new Ngt();
@@ -32,14 +35,18 @@ contract MkrNgtTest is DssTest {
         assertEq(ngt.totalSupply(),            0);
 
         mkr.approve(address(mkrNgt), 400_000 * WAD);
-        mkrNgt.mkrToNgt(400_000 * WAD);
+        vm.expectEmit(true, true, true, true);
+        emit MkrToNgt(address(this), address(this), 400_000 * WAD);
+        mkrNgt.mkrToNgt(address(this), 400_000 * WAD);
         assertEq(mkr.balanceOf(address(this)), 600_000 * WAD);
         assertEq(mkr.totalSupply(),            600_000 * WAD);
         assertEq(ngt.balanceOf(address(this)), 400_000 * WAD * 1200);
         assertEq(ngt.totalSupply(),            400_000 * WAD * 1200);
 
         ngt.approve(address(mkrNgt), 200_000 * WAD * 1200);
-        mkrNgt.ngtToMkr(200_000 * WAD);
+        vm.expectEmit(true, true, true, true);
+        emit NgtToMkr(address(this), address(this), 200_000 * WAD);
+        mkrNgt.ngtToMkr(address(this), 200_000 * WAD);
         assertEq(mkr.balanceOf(address(this)), 800_000 * WAD);
         assertEq(mkr.totalSupply(),            800_000 * WAD);
         assertEq(ngt.balanceOf(address(this)), 200_000 * WAD * 1200);
