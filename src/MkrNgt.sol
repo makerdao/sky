@@ -32,7 +32,7 @@ interface VatLike {
 contract MkrNgt {
     GemLike public immutable mkr;
     GemLike public immutable ngt;
-    uint256 public rate;
+    uint256 public immutable rate;
     
     event MkrToNgt(address indexed caller, address indexed usr, uint256 wad);
     event NgtToMkr(address indexed caller, address indexed usr, uint256 wad);
