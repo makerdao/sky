@@ -25,10 +25,6 @@ interface GemLike {
     function mint(address, uint256) external;
 }
 
-interface VatLike {
-    function hope(address) external;
-}
-
 contract MkrNgt {
     GemLike public immutable mkr;
     GemLike public immutable ngt;
