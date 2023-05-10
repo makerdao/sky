@@ -19,7 +19,6 @@
 
 pragma solidity ^0.8.16;
 
-
 interface GemLike {
     function burn(address, uint256) external;
     function mint(address, uint256) external;
