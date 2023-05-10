@@ -77,5 +77,16 @@ contract MkrNgtTest is DssTest {
         assertEq(ngt.balanceOf(address(this)), 150_000 * WAD * 1200);
         assertEq(ngt.balanceOf(receiver),      150_000 * WAD * 1200);
         assertEq(ngt.totalSupply(),            300_000 * WAD * 1200);
+
+        ngt.approve(address(mkrNgt), 50_000 * WAD * 1200 + 1199);
+        vm.expectEmit(true, true, true, true);
+        emit NgtToMkr(address(this), address(this), 50_000 * WAD * 1200 + 1199);
+        mkrNgt.ngtToMkr(address(this), 50_000 * WAD * 1200 + 1199);
+        assertEq(mkr.balanceOf(address(this)), 700_000 * WAD);
+        assertEq(mkr.balanceOf(receiver),       50_000 * WAD);
+        assertEq(mkr.totalSupply(),            750_000 * WAD);
+        assertEq(ngt.balanceOf(address(this)), 100_000 * WAD * 1200 - 1199);
+        assertEq(ngt.balanceOf(receiver),      150_000 * WAD * 1200);
+        assertEq(ngt.totalSupply(),            250_000 * WAD * 1200 - 1199);
     }
 }
