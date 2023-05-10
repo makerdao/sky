@@ -34,8 +34,8 @@ contract MkrNgt {
     GemLike public immutable ngt;
     uint256 public immutable rate;
     
-    event MkrToNgt(address indexed caller, address indexed usr, uint256 wad);
-    event NgtToMkr(address indexed caller, address indexed usr, uint256 wad);
+    event MkrToNgt(address indexed caller, address indexed usr, uint256 mkrAmt);
+    event NgtToMkr(address indexed caller, address indexed usr, uint256 mkrAmt);
 
     constructor(address mkr_, address ngt_, uint256 rate_) {
         mkr  = GemLike(mkr_);
