@@ -14,8 +14,8 @@ contract MkrNgtTest is DssTest {
     Ngt     ngt;
     MkrNgt  mkrNgt;
 
-    event MkrToNgt(address indexed caller, address indexed usr, uint256 wad);
-    event NgtToMkr(address indexed caller, address indexed usr, uint256 wad);
+    event MkrToNgt(address indexed caller, address indexed usr, uint256 mkrAmt);
+    event NgtToMkr(address indexed caller, address indexed usr, uint256 mkrAmt);
 
     function setUp() public {
         mkr = new Mkr();
