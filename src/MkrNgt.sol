@@ -29,8 +29,8 @@ contract MkrNgt {
     GemLike public immutable ngt;
     uint256 public immutable rate;
     
-    event MkrToNgt(address indexed caller, address indexed usr, uint256 mkrAmt);
-    event NgtToMkr(address indexed caller, address indexed usr, uint256 mkrAmt);
+    event MkrToNgt(address indexed caller, address indexed usr, uint256 mkrAmt, uint256 ngtAmt);
+    event NgtToMkr(address indexed caller, address indexed usr, uint256 ngtAmt, uint256 mkrAmt);
 
     constructor(address mkr_, address ngt_, uint256 rate_) {
         mkr  = GemLike(mkr_);
@@ -40,13 +40,15 @@ contract MkrNgt {
 
     function mkrToNgt(address usr, uint256 mkrAmt) external {
         mkr.burn(msg.sender, mkrAmt);
-        ngt.mint(usr, mkrAmt * rate);
-        emit MkrToNgt(msg.sender, usr, mkrAmt);
+        uint256 ngtAmt = mkrAmt * rate;
+        ngt.mint(usr, ngtAmt);
+        emit MkrToNgt(msg.sender, usr, mkrAmt, ngtAmt);
     }
 
-    function ngtToMkr(address usr, uint256 mkrAmt) external {
-        ngt.burn(msg.sender, mkrAmt * rate);
+    function ngtToMkr(address usr, uint256 ngtAmt) external {
+        ngt.burn(msg.sender, ngtAmt);
+        uint256 mkrAmt = ngtAmt / rate; // Rounding down, dust will be lost if it is not multiple of rate
         mkr.mint(usr, mkrAmt);
-        emit NgtToMkr(msg.sender, usr, mkrAmt);
+        emit NgtToMkr(msg.sender, usr, ngtAmt, mkrAmt);
     }
 }
