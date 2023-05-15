@@ -11,6 +11,7 @@ jobs:
       matrix:
         ngt:
           - ngt
+          - mkr-ngt
 
     steps:
       - name: Checkout
