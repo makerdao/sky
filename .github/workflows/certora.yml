@@ -35,7 +35,7 @@ jobs:
         run: solc-select install 0.8.16
 
       - name: Install Certora
-        run: pip3 install certora-cli-beta
+        run: pip3 install certora-cli
 
       - name: Verify ${{ matrix.ngt }}
         run: make certora-${{ matrix.ngt }} short=1 multi=1
