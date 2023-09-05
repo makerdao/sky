@@ -23,10 +23,6 @@ import { MkrNgt } from "src/MkrNgt.sol";
 
 import { NgtInstance } from "./NgtInstance.sol";
 
-interface NstJoinLike {
-    function vat() external view returns (address);
-}
-
 library NgtDeploy {
     function deploy(
         address deployer,
