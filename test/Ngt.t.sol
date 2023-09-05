@@ -4,7 +4,7 @@ pragma solidity ^0.8.16;
 
 import "token-tests/TokenFuzzTests.sol";
 
-import { Ngt } from "../Ngt.sol";
+import { Ngt } from "src/Ngt.sol";
 
 contract NgtTest is TokenFuzzTests {
     Ngt ngt;
