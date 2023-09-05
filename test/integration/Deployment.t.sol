@@ -49,13 +49,13 @@ contract DeploymentTest is DssTest {
     function setUp() public {
         vm.createSelectFork(vm.envString("ETH_RPC_URL"));
 
-        PAUSE_PROXY  = ChainlogLike(LOG).getAddress("MCD_PAUSE_PROXY");
-        MKR          = ChainlogLike(LOG).getAddress("MCD_GOV");
+        PAUSE_PROXY = ChainlogLike(LOG).getAddress("MCD_PAUSE_PROXY");
+        MKR         = ChainlogLike(LOG).getAddress("MCD_GOV");
 
         inst = NgtDeploy.deploy(address(this), PAUSE_PROXY, MKR, 1200);
     }
 
-    function testDeployment() public {
+    function testSetUp() public {
         DssInstance memory dss = MCD.loadFromChainlog(LOG);
 
         assertEq(Ngt(inst.ngt).wards(inst.mkrNgt), 0);
