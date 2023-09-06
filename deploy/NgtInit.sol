@@ -25,6 +25,7 @@ interface NgtLike {
 
 interface MkrNgtLike {
     function mkr() external view returns (address);
+    function ngt() external view returns (address);
 }
 
 interface MkrLike {
@@ -42,6 +43,7 @@ library NgtInit {
     ) internal {
         address mkr = dss.chainlog.getAddress("MCD_GOV");
         require(MkrNgtLike(instance.mkrNgt).mkr() == mkr, "NgtInit/mkr-does-not-match");
+        require(MkrNgtLike(instance.mkrNgt).ngt() == instance.ngt, "NgtInit/ngt-does-not-match");
 
         NgtLike(instance.ngt).rely(instance.mkrNgt);
         MkrAuthorityLike(MkrLike(mkr).authority()).rely(instance.mkrNgt);
