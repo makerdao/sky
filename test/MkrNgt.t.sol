@@ -4,8 +4,8 @@ pragma solidity ^0.8.16;
 
 import "dss-test/DssTest.sol";
 
-import { Ngt } from "../Ngt.sol";
-import { MkrNgt } from "../MkrNgt.sol";
+import { Ngt } from "src/Ngt.sol";
+import { MkrNgt } from "src/MkrNgt.sol";
 
 contract Mkr is Ngt {}
 
