@@ -48,7 +48,7 @@ library NgtInit {
         NgtLike(instance.ngt).rely(instance.mkrNgt);
         MkrAuthorityLike(MkrLike(mkr).authority()).rely(instance.mkrNgt);
 
-        dss.chainlog.setAddress("NGT",    instance.ngt);
-        dss.chainlog.setAddress("MKRNGT", instance.mkrNgt);
+        dss.chainlog.setAddress("NGT",     instance.ngt);
+        dss.chainlog.setAddress("MKR_NGT", instance.mkrNgt);
     }
 }
