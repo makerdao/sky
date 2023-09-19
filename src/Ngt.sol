@@ -154,7 +154,7 @@ contract Ngt {
     function decreaseAllowance(address spender, uint256 subtractedValue) external returns (bool) {
         uint256 allowed = allowance[msg.sender][spender];
         require(allowed >= subtractedValue, "Ngt/insufficient-allowance");
-        unchecked{
+        unchecked {
             allowed = allowed - subtractedValue;
         }
         allowance[msg.sender][spender] = allowed;
