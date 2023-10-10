@@ -62,7 +62,7 @@ contract DeploymentTest is DssTest {
         assertEq(MkrAuthorityLike(MkrLike(MKR).authority()).wards(inst.mkrNgt), 0);
 
         vm.startPrank(PAUSE_PROXY);
-        NgtInit.init(dss, inst);
+        NgtInit.init(dss, inst, 1200);
         vm.stopPrank();
 
         assertEq(Ngt(inst.ngt).wards(inst.mkrNgt), 1);
