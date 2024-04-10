@@ -38,6 +38,6 @@ jobs:
         run: pip3 install certora-cli
 
       - name: Verify ${{ matrix.ngt }}
-        run: make certora-${{ matrix.ngt }} short=1 multi=1
+        run: make certora-${{ matrix.ngt }}
         env:
           CERTORAKEY: ${{ secrets.CERTORAKEY }}
