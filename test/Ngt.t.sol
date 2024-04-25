@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-pragma solidity ^0.8.16;
+pragma solidity ^0.8.21;
 
 import "token-tests/TokenFuzzTests.sol";
 
@@ -20,7 +20,7 @@ contract NgtTest is TokenFuzzTests {
         _symbol_ = "NGT";
     }
 
-    function invariantMetadata() public {
+    function invariantMetadata() public view {
         assertEq(ngt.name(), "NstDAO Governance Token");
         assertEq(ngt.symbol(), "NGT");
         assertEq(ngt.version(), "1");
