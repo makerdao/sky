@@ -17,3 +17,8 @@ It is a converter between `Mkr` and `Ngt` (both ways). Using the `mint` and `bur
 **Note:** if one of the tokens removes `mint` capabilities to this contract, it means that the path which gives that token to the user won't be available.
 
 **Note 2:** In the MKR -> NGT conversion, if the user passes a `wad` amount not multiple of `rate`, it causes that a dusty value will be lost. 
+
+## Sherlock Contest:
+
+You can find general (and particular for this repository) scope, definitions, rules, disclaimers and known issues that apply to the Sherlock contest [here](https://github.com/makerdao/sherlock-contest/blob/master/README.md).
+Content listed there should be regarded as if it was in this readme.
