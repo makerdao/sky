@@ -31,7 +31,7 @@ contract Sky {
     mapping (address => uint256) public wards;
 
     // --- ERC20 Data ---
-    string  public constant name     = "Sky Governance Token";
+    string  public constant name     = "SKY Governance Token";
     string  public constant symbol   = "SKY";
     string  public constant version  = "1";
     uint8   public constant decimals = 18;
