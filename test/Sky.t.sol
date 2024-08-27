@@ -16,12 +16,12 @@ contract SkyTest is TokenFuzzTests {
   
         _token_ = address(sky);
         _contractName_ = "Sky";
-        _tokenName_ ="Sky Governance Token";
+        _tokenName_ = "SKY Governance Token";
         _symbol_ = "SKY";
     }
 
     function invariantMetadata() public view {
-        assertEq(sky.name(), "Sky Governance Token");
+        assertEq(sky.name(), "SKY Governance Token");
         assertEq(sky.symbol(), "SKY");
         assertEq(sky.version(), "1");
         assertEq(sky.decimals(), 18);
