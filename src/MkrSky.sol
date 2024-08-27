@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// MkrNgt.sol -- Mkr/Ngt Exchanger
+/// MkrSky.sol -- Mkr/Sky Exchanger
 
 // Copyright (C) 2023 Dai Foundation
 //
@@ -24,31 +24,31 @@ interface GemLike {
     function mint(address, uint256) external;
 }
 
-contract MkrNgt {
+contract MkrSky {
     GemLike public immutable mkr;
-    GemLike public immutable ngt;
+    GemLike public immutable sky;
     uint256 public immutable rate;
     
-    event MkrToNgt(address indexed caller, address indexed usr, uint256 mkrAmt, uint256 ngtAmt);
-    event NgtToMkr(address indexed caller, address indexed usr, uint256 ngtAmt, uint256 mkrAmt);
+    event MkrToSky(address indexed caller, address indexed usr, uint256 mkrAmt, uint256 skyAmt);
+    event SkyToMkr(address indexed caller, address indexed usr, uint256 skyAmt, uint256 mkrAmt);
 
-    constructor(address mkr_, address ngt_, uint256 rate_) {
+    constructor(address mkr_, address sky_, uint256 rate_) {
         mkr  = GemLike(mkr_);
-        ngt  = GemLike(ngt_);
+        sky  = GemLike(sky_);
         rate = rate_; 
     }
 
-    function mkrToNgt(address usr, uint256 mkrAmt) external {
+    function mkrToSky(address usr, uint256 mkrAmt) external {
         mkr.burn(msg.sender, mkrAmt);
-        uint256 ngtAmt = mkrAmt * rate;
-        ngt.mint(usr, ngtAmt);
-        emit MkrToNgt(msg.sender, usr, mkrAmt, ngtAmt);
+        uint256 skyAmt = mkrAmt * rate;
+        sky.mint(usr, skyAmt);
+        emit MkrToSky(msg.sender, usr, mkrAmt, skyAmt);
     }
 
-    function ngtToMkr(address usr, uint256 ngtAmt) external {
-        ngt.burn(msg.sender, ngtAmt);
-        uint256 mkrAmt = ngtAmt / rate; // Rounding down, dust will be lost if it is not multiple of rate
+    function skyToMkr(address usr, uint256 skyAmt) external {
+        sky.burn(msg.sender, skyAmt);
+        uint256 mkrAmt = skyAmt / rate; // Rounding down, dust will be lost if it is not multiple of rate
         mkr.mint(usr, mkrAmt);
-        emit NgtToMkr(msg.sender, usr, ngtAmt, mkrAmt);
+        emit SkyToMkr(msg.sender, usr, skyAmt, mkrAmt);
     }
 }

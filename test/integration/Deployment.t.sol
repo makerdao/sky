@@ -18,12 +18,12 @@ pragma solidity ^0.8.21;
 
 import "dss-test/DssTest.sol";
 
-import { NgtInstance } from "deploy/NgtInstance.sol";
-import { NgtDeploy } from "deploy/NgtDeploy.sol";
-import { NgtInit, MkrLike } from "deploy/NgtInit.sol";
+import { SkyInstance } from "deploy/SkyInstance.sol";
+import { SkyDeploy } from "deploy/SkyDeploy.sol";
+import { SkyInit, MkrLike } from "deploy/SkyInit.sol";
 
-import { Ngt } from "src/Ngt.sol";
-import { MkrNgt } from "src/MkrNgt.sol";
+import { Sky } from "src/Sky.sol";
+import { MkrSky } from "src/MkrSky.sol";
 
 interface ChainlogLike {
     function getAddress(bytes32) external view returns (address);
@@ -44,7 +44,7 @@ contract DeploymentTest is DssTest {
     address PAUSE_PROXY;
     address MKR;
 
-    NgtInstance inst;
+    SkyInstance inst;
 
     function setUp() public {
         vm.createSelectFork(vm.envString("ETH_RPC_URL"));
@@ -52,40 +52,40 @@ contract DeploymentTest is DssTest {
         PAUSE_PROXY = ChainlogLike(LOG).getAddress("MCD_PAUSE_PROXY");
         MKR         = ChainlogLike(LOG).getAddress("MCD_GOV");
 
-        inst = NgtDeploy.deploy(address(this), PAUSE_PROXY, MKR, 1200);
+        inst = SkyDeploy.deploy(address(this), PAUSE_PROXY, MKR, 1200);
     }
 
     function testSetUp() public {
         DssInstance memory dss = MCD.loadFromChainlog(LOG);
 
-        assertEq(Ngt(inst.ngt).wards(inst.mkrNgt), 0);
-        assertEq(MkrAuthorityLike(MkrLike(MKR).authority()).wards(inst.mkrNgt), 0);
+        assertEq(Sky(inst.sky).wards(inst.mkrSky), 0);
+        assertEq(MkrAuthorityLike(MkrLike(MKR).authority()).wards(inst.mkrSky), 0);
 
         vm.startPrank(PAUSE_PROXY);
-        NgtInit.init(dss, inst, 1200);
+        SkyInit.init(dss, inst, 1200);
         vm.stopPrank();
 
-        assertEq(Ngt(inst.ngt).wards(inst.mkrNgt), 1);
-        assertEq(MkrAuthorityLike(MkrLike(MKR).authority()).wards(inst.mkrNgt), 1);
+        assertEq(Sky(inst.sky).wards(inst.mkrSky), 1);
+        assertEq(MkrAuthorityLike(MkrLike(MKR).authority()).wards(inst.mkrSky), 1);
 
         deal(MKR, address(this), 1000);
 
         assertEq(GemLike(MKR).balanceOf(address(this)), 1000);
-        assertEq(GemLike(inst.ngt).balanceOf(address(this)), 0);
+        assertEq(GemLike(inst.sky).balanceOf(address(this)), 0);
 
-        GemLike(MKR).approve(inst.mkrNgt, 600);
-        MkrNgt(inst.mkrNgt).mkrToNgt(address(this), 600);
+        GemLike(MKR).approve(inst.mkrSky, 600);
+        MkrSky(inst.mkrSky).mkrToSky(address(this), 600);
 
         assertEq(GemLike(MKR).balanceOf(address(this)), 400);
-        assertEq(GemLike(inst.ngt).balanceOf(address(this)), 600 * 1200);
+        assertEq(GemLike(inst.sky).balanceOf(address(this)), 600 * 1200);
 
-        GemLike(inst.ngt).approve(inst.mkrNgt, 400 * 1200);
-        MkrNgt(inst.mkrNgt).ngtToMkr(address(this), 400 * 1200);
+        GemLike(inst.sky).approve(inst.mkrSky, 400 * 1200);
+        MkrSky(inst.mkrSky).skyToMkr(address(this), 400 * 1200);
 
         assertEq(GemLike(MKR).balanceOf(address(this)), 800);
-        assertEq(GemLike(inst.ngt).balanceOf(address(this)), 200 * 1200);
+        assertEq(GemLike(inst.sky).balanceOf(address(this)), 200 * 1200);
 
-        assertEq(ChainlogLike(LOG).getAddress("NGT"), inst.ngt);
-        assertEq(ChainlogLike(LOG).getAddress("MKR_NGT"), inst.mkrNgt);
+        assertEq(ChainlogLike(LOG).getAddress("SKY"), inst.sky);
+        assertEq(ChainlogLike(LOG).getAddress("MKR_SKY"), inst.mkrSky);
     }
 }

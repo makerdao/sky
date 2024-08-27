@@ -14,28 +14,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pragma solidity ^0.8.21;
+pragma solidity >=0.8.0;
 
-import { ScriptTools } from "dss-test/ScriptTools.sol";
-
-import { Ngt } from "src/Ngt.sol";
-import { MkrNgt } from "src/MkrNgt.sol";
-
-import { NgtInstance } from "./NgtInstance.sol";
-
-library NgtDeploy {
-    function deploy(
-        address deployer,
-        address owner,
-        address mkr,
-        uint256 rate
-    ) internal returns (NgtInstance memory instance) {
-        address _ngt = address(new Ngt());
-        ScriptTools.switchOwner(_ngt, deployer, owner);
-
-        address _mkrNgt = address(new MkrNgt(mkr, _ngt, rate));
-
-        instance.ngt    = _ngt;
-        instance.mkrNgt = _mkrNgt;
-    }
+struct SkyInstance {
+    address sky;
+    address mkrSky;
 }
