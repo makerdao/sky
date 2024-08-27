@@ -9,9 +9,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ngt:
-          - ngt
-          - mkr-ngt
+        sky:
+          - sky
+          - mkr-sky
 
     steps:
       - name: Checkout
@@ -37,7 +37,7 @@ jobs:
       - name: Install Certora
         run: pip3 install certora-cli
 
-      - name: Verify ${{ matrix.ngt }}
-        run: make certora-${{ matrix.ngt }}
+      - name: Verify ${{ matrix.sky }}
+        run: make certora-${{ matrix.sky }}
         env:
           CERTORAKEY: ${{ secrets.CERTORAKEY }}

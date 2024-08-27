@@ -1,7 +1,7 @@
 pragma solidity ^0.8.21;
 
-import "../src/Ngt.sol";
+import "../src/Sky.sol";
 
-contract MkrMock is Ngt {
+contract MkrMock is Sky {
     
 }

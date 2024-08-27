@@ -1,4 +1,4 @@
-// Ngt.spec
+// Sky.spec
 
 using Auxiliar as aux;
 using SignerMock as signer;

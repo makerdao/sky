@@ -17,15 +17,15 @@
 pragma solidity >=0.8.0;
 
 import { DssInstance } from "dss-test/MCD.sol";
-import { NgtInstance } from "./NgtInstance.sol";
+import { SkyInstance } from "./SkyInstance.sol";
 
-interface NgtLike {
+interface SkyLike {
     function rely(address) external;
 }
 
-interface MkrNgtLike {
+interface MkrSkyLike {
     function mkr() external view returns (address);
-    function ngt() external view returns (address);
+    function sky() external view returns (address);
     function rate() external view returns (uint256);
 }
 
@@ -37,21 +37,21 @@ interface MkrAuthorityLike {
     function rely(address) external;
 }
 
-library NgtInit {
+library SkyInit {
     function init(
         DssInstance memory dss,
-        NgtInstance memory instance,
+        SkyInstance memory instance,
         uint256 rate
     ) internal {
         address mkr = dss.chainlog.getAddress("MCD_GOV");
-        require(MkrNgtLike(instance.mkrNgt).mkr()  == mkr,          "NgtInit/mkr-does-not-match");
-        require(MkrNgtLike(instance.mkrNgt).ngt()  == instance.ngt, "NgtInit/ngt-does-not-match");
-        require(MkrNgtLike(instance.mkrNgt).rate() == rate,         "NgtInit/rate-does-not-match");
+        require(MkrSkyLike(instance.mkrSky).mkr()  == mkr,          "SkyInit/mkr-does-not-match");
+        require(MkrSkyLike(instance.mkrSky).sky()  == instance.sky, "SkyInit/sky-does-not-match");
+        require(MkrSkyLike(instance.mkrSky).rate() == rate,         "SkyInit/rate-does-not-match");
 
-        NgtLike(instance.ngt).rely(instance.mkrNgt);
-        MkrAuthorityLike(MkrLike(mkr).authority()).rely(instance.mkrNgt);
+        SkyLike(instance.sky).rely(instance.mkrSky);
+        MkrAuthorityLike(MkrLike(mkr).authority()).rely(instance.mkrSky);
 
-        dss.chainlog.setAddress("NGT",     instance.ngt);
-        dss.chainlog.setAddress("MKR_NGT", instance.mkrNgt);
+        dss.chainlog.setAddress("SKY",     instance.sky);
+        dss.chainlog.setAddress("MKR_SKY", instance.mkrSky);
     }
 }
