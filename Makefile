@@ -1,3 +1,3 @@
-all         :; forge build --use solc:0.8.16
-clean       :; forge clean
-test        :; forge test -vvv --use solc:0.8.16
+PATH := ~/.solc-select/artifacts/solc-0.8.21:~/.solc-select/artifacts:$(PATH)
+certora-sky     :; PATH=${PATH} certoraRun certora/Sky.conf$(if $(rule), --rule $(rule),)
+certora-mkr-sky :; PATH=${PATH} certoraRun certora/MkrSky.conf$(if $(rule), --rule $(rule),)
