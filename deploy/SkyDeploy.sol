@@ -38,4 +38,12 @@ library SkyDeploy {
         instance.sky    = _sky;
         instance.mkrSky = _mkrSky;
     }
+
+    function deployL2(
+        address deployer,
+        address owner
+    ) internal returns (address sky) {
+        sky = address(new Sky());
+        ScriptTools.switchOwner(sky, deployer, owner);
+    }
 }
