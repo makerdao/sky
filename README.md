@@ -17,3 +17,7 @@ It is a converter between `Mkr` and `Sky` (both ways). Using the `mint` and `bur
 **Note:** if one of the tokens removes `mint` capabilities to this contract, it means that the path which gives that token to the user won't be available.
 
 **Note 2:** In the MKR -> SKY conversion, if the user passes a `wad` amount not multiple of `rate`, it causes that a dusty value will be lost.
+
+### SupplySync
+
+A contract with permissionless functionality that syncs the SKY supply to include also the MKR supply (thus MKR acts as wrapper of SKY).

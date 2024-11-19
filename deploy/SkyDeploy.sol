@@ -20,6 +20,7 @@ import { ScriptTools } from "dss-test/ScriptTools.sol";
 
 import { Sky } from "src/Sky.sol";
 import { MkrSky } from "src/MkrSky.sol";
+import { SupplySync } from "src/SupplySync.sol";
 
 import { SkyInstance } from "./SkyInstance.sol";
 
@@ -45,5 +46,13 @@ library SkyDeploy {
     ) internal returns (address sky) {
         sky = address(new Sky());
         ScriptTools.switchOwner(sky, deployer, owner);
+    }
+
+    function deploySupplySync(
+        address mkr,
+        address sky,
+        address owner
+    ) internal returns (address supplySync) {
+        supplySync = address(new SupplySync(mkr, sky, owner));
     }
 }

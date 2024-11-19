@@ -21,12 +21,18 @@ import { SkyInstance } from "./SkyInstance.sol";
 
 interface SkyLike {
     function rely(address) external;
+    function allowance(address, address) external view returns (uint256);
 }
 
 interface MkrSkyLike {
     function mkr() external view returns (address);
     function sky() external view returns (address);
     function rate() external view returns (uint256);
+}
+
+interface SupplySyncLike {
+    function mkr() external view returns (address);
+    function sky() external view returns (address);
 }
 
 interface MkrLike {
@@ -53,5 +59,19 @@ library SkyInit {
 
         dss.chainlog.setAddress("SKY",     instance.sky);
         dss.chainlog.setAddress("MKR_SKY", instance.mkrSky);
+    }
+
+    function initSupplySync(
+        DssInstance memory dss,
+        address supplySync
+    ) internal {
+        SkyLike sky = SkyLike(dss.chainlog.getAddress("SKY"));
+
+        require(SupplySyncLike(supplySync).mkr() == dss.chainlog.getAddress("MCD_GOV"), "SkyInit/mkr-does-not-match");
+        require(SupplySyncLike(supplySync).sky() == address(sky),                       "SkyInit/sky-does-not-match");
+        require(sky.allowance(supplySync, dss.chainlog.getAddress("MCD_PAUSE_PROXY")) == type(uint256).max, "SkyInit/allowance-not-set");
+
+        sky.rely(supplySync);
+        dss.chainlog.setAddress("SKY_SUPPLY_SYNC", supplySync);
     }
 }
