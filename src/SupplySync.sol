@@ -47,15 +47,18 @@ contract SupplySync {
         sky.approve(owner, type(uint256).max);
     }
 
-    function sync() external {
+    function sync() external returns (bool isMint, uint256 amount) {
         uint256 mkrSupplyInSky = mkr.totalSupply() * rate;
         uint256 skyBalance     = sky.balanceOf(address(this));
 
         unchecked {
             if (mkrSupplyInSky > skyBalance) {
-                sky.mint(address(this), mkrSupplyInSky - skyBalance);
-            } else {
-                sky.burn(address(this), skyBalance - mkrSupplyInSky);
+                isMint = true;
+                amount = mkrSupplyInSky - skyBalance;
+                sky.mint(address(this), amount);
+            } else if (mkrSupplyInSky < skyBalance) {
+                amount = skyBalance - mkrSupplyInSky;
+                sky.burn(address(this), amount);
             }
         }
     }

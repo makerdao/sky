@@ -71,11 +71,13 @@ contract SupplySyncTest is DssTest {
         uint256 skySupplyBefore   = SKY.totalSupply();
         uint256 syncBalanceBefore = SKY.balanceOf(address(sync));
 
-        sync.sync();
+        (bool isMint, uint256 amount) = sync.sync();
 
         uint256 syncBalanceAfter = SKY.balanceOf(address(sync));
 
         assertEq(syncBalanceAfter, mkrSupply * 24_000);
+        assertEq(isMint, isExpectedMint);
+        assertEq(amount, expectedChange);
         if (isExpectedMint) {
             assertEq(syncBalanceAfter,  syncBalanceBefore + expectedChange);
             assertEq(SKY.totalSupply(), skySupplyBefore   + expectedChange);
@@ -102,7 +104,7 @@ contract SupplySyncTest is DssTest {
 
     function testExactSkyInSync() public {
         deal(address(SKY), address(sync), MKR.totalSupply() * 24_000);
-        _checkSync(true, 0);
+        _checkSync(false, 0);
     }
 
     function testWindDown() public {
