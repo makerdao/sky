@@ -2,7 +2,7 @@
 
 /// MkrSky.sol -- Mkr/Sky Exchanger
 
-// Copyright (C) 2023 Dai Foundation
+// Copyright (C) 2024 Dai Foundation
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -27,20 +27,28 @@ interface GemLike {
     function burn(address, uint256) external;
 }
 
+interface MkrSkyLike {
+    function mkr() external view returns (address);
+    function sky() external view returns (address);
+    function rate() external view returns (uint256);
+}
+
 contract SupplySync {
     GemLike public immutable mkr;
     GemLike public immutable sky;
+    uint256 public immutable rate;
 
-    constructor(address mkr_, address sky_, address owner) {
-        mkr = GemLike(mkr_);
-        sky = GemLike(sky_);
+    constructor(address mkrSky, address owner) {
+        mkr  = GemLike(MkrSkyLike(mkrSky).mkr());
+        sky  = GemLike(MkrSkyLike(mkrSky).sky());
+        rate = MkrSkyLike(mkrSky).rate();
 
         // Allow owner (pause proxy) to burn the sky in this contract, if ever needed to wind down
         sky.approve(owner, type(uint256).max);
     }
 
     function sync() external {
-        uint256 mkrSupplyInSky = mkr.totalSupply() * 24_000;
+        uint256 mkrSupplyInSky = mkr.totalSupply() * rate;
         uint256 skyBalance     = sky.balanceOf(address(this));
 
         unchecked {

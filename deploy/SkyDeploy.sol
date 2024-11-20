@@ -49,10 +49,9 @@ library SkyDeploy {
     }
 
     function deploySupplySync(
-        address mkr,
-        address sky,
+        address mkrSky,
         address owner
     ) internal returns (address supplySync) {
-        supplySync = address(new SupplySync(mkr, sky, owner));
+        supplySync = address(new SupplySync(mkrSky, owner));
     }
 }

@@ -1,4 +1,18 @@
+// SPDX-FileCopyrightText: © 2024 Dai Foundation <www.daifoundation.org>
 // SPDX-License-Identifier: AGPL-3.0-or-later
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pragma solidity ^0.8.21;
 
@@ -16,7 +30,6 @@ interface GemLike {
 
 interface SkyLike is GemLike {
     function wards(address) external view returns (uint256);
-    function rely(address) external;
     function deny(address) external;
 }
 
@@ -38,7 +51,7 @@ contract SupplySyncTest is DssTest {
         MKR         = GemLike(dss.chainlog.getAddress("MCD_GOV"));
         SKY         = SkyLike(dss.chainlog.getAddress("SKY"));
 
-        sync = SupplySync(SkyDeploy.deploySupplySync(address(MKR), address(SKY), PAUSE_PROXY));
+        sync = SupplySync(SkyDeploy.deploySupplySync(dss.chainlog.getAddress("MKR_SKY"), PAUSE_PROXY));
         vm.startPrank(PAUSE_PROXY);
         SkyInit.initSupplySync(dss, address(sync));
         vm.stopPrank();
@@ -47,6 +60,7 @@ contract SupplySyncTest is DssTest {
     function testDeployAndInit() public {
         assertEq(address(sync.mkr()), address(MKR));
         assertEq(address(sync.sky()), address(SKY));
+        assertEq(sync.rate(), 24_000);
         assertEq(SKY.allowance(address(sync), PAUSE_PROXY), type(uint256).max);
         assertEq(SKY.wards(address(sync)), 1);
         assertEq(dss.chainlog.getAddress("SKY_SUPPLY_SYNC"), address(sync));
@@ -71,7 +85,7 @@ contract SupplySyncTest is DssTest {
         }
     }
 
-    function testSZeroSkyInSync() public {
+    function testZeroSkyInSync() public {
         deal(address(SKY), address(sync), 0);
         _checkSync(true, MKR.totalSupply() * 24_000);
     }
