@@ -38,6 +38,6 @@ jobs:
         run: pip3 install certora-cli
 
       - name: Verify ${{ matrix.sky }}
-        run: make certora-${{ matrix.sky }}
+        run: make certora-${{ matrix.sky }} results=1
         env:
           CERTORAKEY: ${{ secrets.CERTORAKEY }}
