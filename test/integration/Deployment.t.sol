@@ -18,7 +18,6 @@ pragma solidity ^0.8.21;
 
 import "dss-test/DssTest.sol";
 
-import { SkyInstance } from "deploy/SkyInstance.sol";
 import { SkyDeploy } from "deploy/SkyDeploy.sol";
 import { SkyInit, MkrLike } from "deploy/SkyInit.sol";
 
@@ -36,6 +35,12 @@ interface MkrAuthorityLike {
 interface GemLike {
     function balanceOf(address) external view returns (uint256);
     function approve(address, uint256) external;
+    function totalSupply() external view returns (uint256);
+}
+
+interface OldMkrSkyLike {
+    function mkrToSky(address, uint256) external;
+    function skyToMkr(address, uint256) external;
 }
 
 contract DeploymentTest is DssTest {
@@ -43,49 +48,67 @@ contract DeploymentTest is DssTest {
 
     address PAUSE_PROXY;
     address MKR;
-
-    SkyInstance inst;
+    address SKY;
 
     function setUp() public {
         vm.createSelectFork(vm.envString("ETH_RPC_URL"));
 
         PAUSE_PROXY = ChainlogLike(LOG).getAddress("MCD_PAUSE_PROXY");
         MKR         = ChainlogLike(LOG).getAddress("MCD_GOV");
-
-        inst = SkyDeploy.deploy(address(this), PAUSE_PROXY, MKR, 1200);
+        SKY         = ChainlogLike(LOG).getAddress("SKY");
     }
 
-    function testSetUp() public {
+    function testReplaceMkrSky() public {
+        address mkrSky = SkyDeploy.deployMkrSky(address(this), PAUSE_PROXY, MKR, SKY, 24_000);
+        assertEq(address(MkrSky(mkrSky).mkr()), MKR);
+        assertEq(address(MkrSky(mkrSky).sky()), SKY);
+        assertEq(MkrSky(mkrSky).rate(), 24_000);
+        assertEq(MkrSky(mkrSky).wards(address(this)), 0);
+        assertEq(MkrSky(mkrSky).wards(PAUSE_PROXY), 1);
+
         DssInstance memory dss = MCD.loadFromChainlog(LOG);
 
-        assertEq(Sky(inst.sky).wards(inst.mkrSky), 0);
-        assertEq(MkrAuthorityLike(MkrLike(MKR).authority()).wards(inst.mkrSky), 0);
+        address oldMkrSky = ChainlogLike(LOG).getAddress("MKR_SKY");
+
+        assertEq(Sky(SKY).wards(oldMkrSky), 1);
+        assertEq(MkrAuthorityLike(MkrLike(MKR).authority()).wards(oldMkrSky), 1);
 
         vm.startPrank(PAUSE_PROXY);
-        SkyInit.init(dss, inst, 1200);
+        SkyInit.updateMkrSky(dss, mkrSky, 24_000);
         vm.stopPrank();
 
-        assertEq(Sky(inst.sky).wards(inst.mkrSky), 1);
-        assertEq(MkrAuthorityLike(MkrLike(MKR).authority()).wards(inst.mkrSky), 1);
+        assertEq(Sky(SKY).wards(oldMkrSky), 1); // only the mkr=>sky direction is supported in the old migrator
+        assertEq(MkrAuthorityLike(MkrLike(MKR).authority()).wards(oldMkrSky), 0);
+        assertEq(ChainlogLike(LOG).getAddress("MKR_SKY_LEGACY"), oldMkrSky);
+        assertEq(ChainlogLike(LOG).getAddress("MKR_SKY"), mkrSky);
+        assertEq(Sky(SKY).balanceOf(mkrSky), GemLike(MKR).totalSupply() * 24_000);
+        assertEq(MkrSky(mkrSky).fee(), 0);
 
-        deal(MKR, address(this), 1000);
+        deal(MKR, address(this), 1_000);
 
-        assertEq(GemLike(MKR).balanceOf(address(this)), 1000);
-        assertEq(GemLike(inst.sky).balanceOf(address(this)), 0);
+        // Test mkrToSky on new converter
 
-        GemLike(MKR).approve(inst.mkrSky, 600);
-        MkrSky(inst.mkrSky).mkrToSky(address(this), 600);
+        assertEq(GemLike(MKR).balanceOf(address(this)), 1_000);
+        assertEq(GemLike(SKY).balanceOf(address(this)), 0);
+
+        GemLike(MKR).approve(mkrSky, 600);
+        MkrSky(mkrSky).mkrToSky(address(this), 600);
 
         assertEq(GemLike(MKR).balanceOf(address(this)), 400);
-        assertEq(GemLike(inst.sky).balanceOf(address(this)), 600 * 1200);
+        assertEq(GemLike(SKY).balanceOf(address(this)), 600 * 24_000);
 
-        GemLike(inst.sky).approve(inst.mkrSky, 400 * 1200);
-        MkrSky(inst.mkrSky).skyToMkr(address(this), 400 * 1200);
+        // mkrToSky on old converter should still work
 
-        assertEq(GemLike(MKR).balanceOf(address(this)), 800);
-        assertEq(GemLike(inst.sky).balanceOf(address(this)), 200 * 1200);
+        GemLike(MKR).approve(oldMkrSky, 200);
+        OldMkrSkyLike(oldMkrSky).mkrToSky(address(this), 200);
 
-        assertEq(ChainlogLike(LOG).getAddress("SKY"), inst.sky);
-        assertEq(ChainlogLike(LOG).getAddress("MKR_SKY"), inst.mkrSky);
+        assertEq(GemLike(MKR).balanceOf(address(this)), 200);
+        assertEq(GemLike(SKY).balanceOf(address(this)), 800 * 24_000);
+
+        // skyToMkr on old converter should fail
+
+        GemLike(SKY).approve(oldMkrSky, 500 * 24_000);
+        vm.expectRevert(bytes(""));
+        OldMkrSkyLike(oldMkrSky).skyToMkr(address(this), 500 * 24_000);
     }
 }

@@ -17,10 +17,11 @@
 pragma solidity >=0.8.0;
 
 import { DssInstance } from "dss-test/MCD.sol";
-import { SkyInstance } from "./SkyInstance.sol";
 
 interface SkyLike {
     function rely(address) external;
+    function deny(address) external;
+    function mint(address, uint256) external;
 }
 
 interface MkrSkyLike {
@@ -31,27 +32,35 @@ interface MkrSkyLike {
 
 interface MkrLike {
     function authority() external view returns (address);
+    function totalSupply() external view returns (uint256);
 }
 
 interface MkrAuthorityLike {
     function rely(address) external;
+    function deny(address) external;
 }
 
 library SkyInit {
-    function init(
+
+    // Note that we assume the fee is 0 initially, hence we don't set it explicitly
+    function updateMkrSky(
         DssInstance memory dss,
-        SkyInstance memory instance,
+        address mkrSky,
         uint256 rate
     ) internal {
         address mkr = dss.chainlog.getAddress("MCD_GOV");
-        require(MkrSkyLike(instance.mkrSky).mkr()  == mkr,          "SkyInit/mkr-does-not-match");
-        require(MkrSkyLike(instance.mkrSky).sky()  == instance.sky, "SkyInit/sky-does-not-match");
-        require(MkrSkyLike(instance.mkrSky).rate() == rate,         "SkyInit/rate-does-not-match");
+        address sky = dss.chainlog.getAddress("SKY");
+        require(MkrSkyLike(mkrSky).rate() == rate, "SkyInit/rate-does-not-match");
 
-        SkyLike(instance.sky).rely(instance.mkrSky);
-        MkrAuthorityLike(MkrLike(mkr).authority()).rely(instance.mkrSky);
+        address oldMkrSky = dss.chainlog.getAddress("MKR_SKY");
 
-        dss.chainlog.setAddress("SKY",     instance.sky);
-        dss.chainlog.setAddress("MKR_SKY", instance.mkrSky);
+        // Block the sky=>mkr direction for the old converter
+        MkrAuthorityLike(MkrLike(mkr).authority()).deny(oldMkrSky);
+
+        // Mint SKY to facilitate conversions
+        SkyLike(sky).mint(address(mkrSky), MkrLike(mkr).totalSupply() * rate);
+
+        dss.chainlog.setAddress("MKR_SKY_LEGACY", oldMkrSky);
+        dss.chainlog.setAddress("MKR_SKY", mkrSky);
     }
 }
