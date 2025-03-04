@@ -103,5 +103,17 @@ contract MkrSkyTest is DssTest {
         assertEq(sky.balanceOf(address(mkrSky)), 604_000 * WAD * rate);
         assertEq(sky.totalSupply(),              1_000_000 * WAD * rate);
         assertEq(mkrSky.take(),                  4_000 * WAD * rate);
+
+        mkr.approve(address(mkrSky), 400_000 * WAD);
+
+        vm.expectEmit(true, true, true, true);
+        emit MkrToSky(address(this), address(123), 400_000 * WAD,  (400_000 - 4_000) * WAD * rate, 4_000 * WAD * rate);
+        mkrSky.mkrToSky(address(123), 400_000 * WAD);
+        assertEq(mkr.balanceOf(address(this)),   200_000 * WAD);
+        assertEq(mkr.totalSupply(),              200_000 * WAD);
+        assertEq(sky.balanceOf(address(123)),    396_000 * WAD * rate);
+        assertEq(sky.balanceOf(address(mkrSky)), 208_000 * WAD * rate);
+        assertEq(sky.totalSupply(),              1_000_000 * WAD * rate);
+        assertEq(mkrSky.take(),                  8_000 * WAD * rate);
     }
 }
