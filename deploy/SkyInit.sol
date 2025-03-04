@@ -58,7 +58,7 @@ library SkyInit {
         MkrAuthorityLike(MkrLike(mkr).authority()).deny(oldMkrSky);
 
         // Mint SKY to facilitate conversions
-        SkyLike(sky).mint(address(mkrSky), MkrLike(mkr).totalSupply() * rate);
+        SkyLike(sky).mint(mkrSky, MkrLike(mkr).totalSupply() * rate);
 
         dss.chainlog.setAddress("MKR_SKY_LEGACY", oldMkrSky);
         dss.chainlog.setAddress("MKR_SKY", mkrSky);
