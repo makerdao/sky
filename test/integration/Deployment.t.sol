@@ -74,7 +74,7 @@ contract DeploymentTest is DssTest {
         assertEq(MkrAuthorityLike(MkrLike(MKR).authority()).wards(oldMkrSky), 1);
 
         vm.startPrank(PAUSE_PROXY);
-        SkyInit.updateMkrSky(dss, mkrSky, 24_000);
+        SkyInit.updateMkrSky(dss, mkrSky);
         vm.stopPrank();
 
         assertEq(Sky(SKY).wards(oldMkrSky), 1); // only the mkr=>sky direction is supported in the old migrator

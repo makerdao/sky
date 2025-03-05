@@ -45,20 +45,17 @@ library SkyInit {
     // Note that we assume the fee is 0 initially, hence we don't set it explicitly
     function updateMkrSky(
         DssInstance memory dss,
-        address mkrSky,
-        uint256 rate
+        address mkrSky
     ) internal {
-        address mkr = dss.chainlog.getAddress("MCD_GOV");
-        address sky = dss.chainlog.getAddress("SKY");
-        require(MkrSkyLike(mkrSky).rate() == rate, "SkyInit/rate-does-not-match");
-
+        address mkr       = dss.chainlog.getAddress("MCD_GOV");
+        address sky       = dss.chainlog.getAddress("SKY");
         address oldMkrSky = dss.chainlog.getAddress("MKR_SKY");
 
         // Block the sky=>mkr direction for the old converter
         MkrAuthorityLike(MkrLike(mkr).authority()).deny(oldMkrSky);
 
         // Mint SKY to facilitate conversions
-        SkyLike(sky).mint(mkrSky, MkrLike(mkr).totalSupply() * rate);
+        SkyLike(sky).mint(mkrSky, MkrLike(mkr).totalSupply() * MkrSkyLike(oldMkrSky).rate());
 
         dss.chainlog.setAddress("MKR_SKY_LEGACY", oldMkrSky);
         dss.chainlog.setAddress("MKR_SKY", mkrSky);
