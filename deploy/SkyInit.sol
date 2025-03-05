@@ -19,8 +19,6 @@ pragma solidity >=0.8.0;
 import { DssInstance } from "dss-test/MCD.sol";
 
 interface SkyLike {
-    function rely(address) external;
-    function deny(address) external;
     function mint(address, uint256) external;
 }
 
@@ -36,7 +34,6 @@ interface MkrLike {
 }
 
 interface MkrAuthorityLike {
-    function rely(address) external;
     function deny(address) external;
 }
 
@@ -47,15 +44,20 @@ library SkyInit {
         DssInstance memory dss,
         address mkrSky
     ) internal {
-        address mkr       = dss.chainlog.getAddress("MCD_GOV");
-        address sky       = dss.chainlog.getAddress("SKY");
         address oldMkrSky = dss.chainlog.getAddress("MKR_SKY");
+        address mkr  = MkrSkyLike(oldMkrSky).mkr();
+        address sky  = MkrSkyLike(oldMkrSky).sky();
+        uint256 rate = MkrSkyLike(oldMkrSky).rate();
+
+        require(MkrSkyLike(mkrSky).mkr()  == mkr,  "SkyInit/mkr-mismatch");
+        require(MkrSkyLike(mkrSky).sky()  == sky,  "SkyInit/sky-mismatch");
+        require(MkrSkyLike(mkrSky).rate() == rate, "SkyInit/rate-mismatch");
 
         // Block the sky=>mkr direction for the old converter
         MkrAuthorityLike(MkrLike(mkr).authority()).deny(oldMkrSky);
 
         // Mint SKY to facilitate conversions
-        SkyLike(sky).mint(mkrSky, MkrLike(mkr).totalSupply() * MkrSkyLike(oldMkrSky).rate());
+        SkyLike(sky).mint(mkrSky, MkrLike(mkr).totalSupply() * rate);
 
         dss.chainlog.setAddress("MKR_SKY_LEGACY", oldMkrSky);
         dss.chainlog.setAddress("MKR_SKY", mkrSky);
