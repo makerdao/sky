@@ -49,9 +49,9 @@ library SkyInit {
         address sky  = MkrSkyLike(oldMkrSky).sky();
         uint256 rate = MkrSkyLike(oldMkrSky).rate();
 
-        require(MkrSkyLike(mkrSky).mkr()  == mkr,  "SkyInit/mkr-mismatch");
-        require(MkrSkyLike(mkrSky).sky()  == sky,  "SkyInit/sky-mismatch");
-        require(MkrSkyLike(mkrSky).rate() == rate, "SkyInit/rate-mismatch");
+        require(MkrSkyLike(mkrSky).mkr()  == mkr);
+        require(MkrSkyLike(mkrSky).sky()  == sky);
+        require(MkrSkyLike(mkrSky).rate() == rate);
 
         // Block the sky=>mkr direction for the old converter
         MkrAuthorityLike(MkrLike(mkr).authority()).deny(oldMkrSky);
