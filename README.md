@@ -8,12 +8,21 @@ This repository includes 2 smart contracts:
 ### SKY token
 
 This is a standard erc20 implementation with regular `permit` functionality + EIP-1271 smart contract signature validation.
-In principle `PauseProxy` and `MkrSky` would be the only two contracts set as `wards(address)`.
 
 ### MkrSky
 
-It is a converter between `Mkr` and `Sky` (both ways). Using the `mint` and `burn` capabilities of both tokens it is possible to exchange one to the other. The exchange rate is 1:`rate` (value defined as `immutable`).
+A permissionless converter of `Mkr` to `Sky`.
+Upon initialization, an amount of `Sky` equivalent to the total supply of `Mkr` is minted to it.
+It is then assumed that further minting of `Mkr` will not happen.
+In case the `Sky` amount in the converter later exceeds the `Mkr` supply, governance can use the `burn` function to reduce the `Sky` balance. 
+The above can happen for example because of burning of `Mkr` outside of the converters, using the `mkrToSky` path in the old converter, or because of `Sky` donations to the new converter. 
 
-**Note:** if one of the tokens removes `mint` capabilities to this contract, it means that the path which gives that token to the user won't be available.
+The exchange rate is generally 1:`rate` (value defined as `immutable`), while there is also a configureable fee.
+The swap `mkrToSky` function receives `Mkr`, burns it and sends the equivalent amount in `Sky` from the balance, minus the fee.
+The accumulated fees can be collected by governance.
 
-**Note 2:** In the MKR -> SKY conversion, if the user passes a `wad` amount not multiple of `rate`, it causes that a dusty value will be lost.
+### Legacy MkrSky
+
+The legacy MkrSky converter supported bi-directional conversions.
+Upon initialization of the new converter, only the `mkrToSky` path will be supported.
+It is expected that once the new converter fee becomes non-zero, the `mkrToSky` path in the old converter will also be disabled.

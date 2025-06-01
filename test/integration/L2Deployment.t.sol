@@ -31,7 +31,7 @@ contract DeploymentTest is DssTest {
         sky = SkyDeploy.deployL2(address(this), l2GovRelay);
     }
 
-    function testSetUp() public {
+    function testSetUp() public view {
         assertEq(Sky(sky).wards(l2GovRelay), 1);
         assertEq(Sky(sky).wards(address(this)), 0);
     }

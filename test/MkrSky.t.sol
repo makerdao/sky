@@ -14,79 +14,106 @@ contract MkrSkyTest is DssTest {
     Sky     sky;
     MkrSky  mkrSky;
 
-    event MkrToSky(address indexed caller, address indexed usr, uint256 mkrAmt, uint256 skyAmt);
-    event SkyToMkr(address indexed caller, address indexed usr, uint256 skyAmt, uint256 mkrAmt);
+    uint256 rate = 24_000;
+
+    event Collect(address indexed to, uint256 take);
+    event Burn(uint256 skyAmt);
+    event MkrToSky(address indexed caller, address indexed usr, uint256 mkrAmt, uint256 skyAmt, uint256 skyFee);
 
     function setUp() public {
         mkr = new Mkr();
         sky = new Sky();
-        mkrSky = new MkrSky(address(mkr), address(sky), 1200);
+        mkrSky = new MkrSky(address(mkr), address(sky), rate);
         mkr.mint(address(this), 1_000_000 * WAD);
-        mkr.rely(address(mkrSky));
-        mkr.deny(address(this));
-        sky.rely(address(mkrSky));
-        sky.deny(address(this));
+        sky.mint(address(mkrSky), 1_000_000 * WAD * rate);
+        mkrSky.file("fee", 0.01 ether);
+    }
+
+    function testAuth() public {
+        checkAuth(address(mkrSky), "MkrSky");
+    }
+
+    function testFile() public {
+        checkFileUint(address(mkrSky), "MkrSky", ["fee"]);
+
+        vm.expectRevert("MkrSky/fee-exceeds-wad");
+        mkrSky.file("fee", WAD + 1);
+    }
+
+    function testModifiers() public {
+        bytes4[] memory authedMethods = new bytes4[](2);
+        authedMethods[0] = mkrSky.collect.selector;
+        authedMethods[1] = mkrSky.burn.selector;
+
+        // this checks the case where sender is not authed
+        vm.startPrank(address(0xBEEF));
+        checkModifier(address(mkrSky), "MkrSky/not-authorized", authedMethods);
+        vm.stopPrank();
+    }
+
+    function testCollect() public {
+        mkr.approve(address(mkrSky), 100_000 * WAD);
+        mkrSky.mkrToSky(address(this), 100_000 * WAD);
+        assertEq(mkrSky.take(), 1_000 * WAD * rate);
+
+        vm.expectEmit(true, true, true, true);
+        emit Collect(address(0xfee), 1_000 * WAD * rate);
+        mkrSky.collect(address(0xfee));
+
+        assertEq(mkrSky.take(), 0);
+        assertEq(sky.balanceOf(address(0xfee)), 1_000 * WAD * rate);
+        vm.expectRevert("MkrSky/nothing-to-collect");
+        mkrSky.collect(address(0xfee));
+    }
+
+    function testBurn() public {
+        assertEq(sky.balanceOf(address(mkrSky)), 1_000_000 * WAD * rate);
+        assertEq(sky.totalSupply(),              1_000_000 * WAD * rate);
+
+        vm.expectEmit();
+        emit Burn(400_000 * WAD * rate);
+        mkrSky.burn(400_000 * WAD * rate);
+
+        assertEq(sky.balanceOf(address(mkrSky)), 600_000 * WAD * rate);
+        assertEq(sky.totalSupply(),              600_000 * WAD * rate);
+
+        vm.expectEmit();
+        emit Burn(600_000 * WAD * rate);
+        mkrSky.burn(600_000 * WAD * rate);
+
+        assertEq(sky.balanceOf(address(mkrSky)), 0);
+        assertEq(sky.totalSupply(),              0);
     }
 
     function testExchange() public {
-        assertEq(mkr.balanceOf(address(this)), 1_000_000 * WAD);
-        assertEq(mkr.totalSupply(),            1_000_000 * WAD);
-        assertEq(sky.balanceOf(address(this)), 0);
-        assertEq(sky.totalSupply(),            0);
+        assertEq(mkr.balanceOf(address(this)),   1_000_000 * WAD);
+        assertEq(mkr.totalSupply(),              1_000_000 * WAD);
+        assertEq(sky.balanceOf(address(this)),   0);
+        assertEq(sky.balanceOf(address(mkrSky)), 1_000_000 * WAD * rate);
+        assertEq(sky.totalSupply(),              1_000_000 * WAD * rate);
 
         mkr.approve(address(mkrSky), 400_000 * WAD);
+
         vm.expectEmit(true, true, true, true);
-        emit MkrToSky(address(this), address(this), 400_000 * WAD,  400_000 * WAD * 1200);
+        emit MkrToSky(address(this), address(this), 400_000 * WAD,  (400_000 - 4_000) * WAD * rate, 4_000 * WAD * rate);
         mkrSky.mkrToSky(address(this), 400_000 * WAD);
-        assertEq(mkr.balanceOf(address(this)), 600_000 * WAD);
-        assertEq(mkr.totalSupply(),            600_000 * WAD);
-        assertEq(sky.balanceOf(address(this)), 400_000 * WAD * 1200);
-        assertEq(sky.totalSupply(),            400_000 * WAD * 1200);
+        assertEq(mkr.balanceOf(address(this)),   600_000 * WAD);
+        assertEq(mkr.totalSupply(),              600_000 * WAD);
+        assertEq(sky.balanceOf(address(this)),   396_000 * WAD * rate);
+        assertEq(sky.balanceOf(address(mkrSky)), 604_000 * WAD * rate);
+        assertEq(sky.totalSupply(),              1_000_000 * WAD * rate);
+        assertEq(mkrSky.take(),                  4_000 * WAD * rate);
 
-        sky.approve(address(mkrSky), 200_000 * WAD * 1200);
+        mkr.approve(address(mkrSky), 400_000 * WAD);
+
         vm.expectEmit(true, true, true, true);
-        emit SkyToMkr(address(this), address(this), 200_000 * WAD * 1200, 200_000 * WAD);
-        mkrSky.skyToMkr(address(this), 200_000 * WAD * 1200);
-        assertEq(mkr.balanceOf(address(this)), 800_000 * WAD);
-        assertEq(mkr.totalSupply(),            800_000 * WAD);
-        assertEq(sky.balanceOf(address(this)), 200_000 * WAD * 1200);
-        assertEq(sky.totalSupply(),            200_000 * WAD * 1200);
-
-        address receiver = address(123);
-        assertEq(mkr.balanceOf(receiver),                0);
-        assertEq(sky.balanceOf(receiver),                0);
-
-        mkr.approve(address(mkrSky), 150_000 * WAD);
-        vm.expectEmit(true, true, true, true);
-        emit MkrToSky(address(this), receiver, 150_000 * WAD, 150_000 * WAD * 1200);
-        mkrSky.mkrToSky(receiver, 150_000 * WAD);
-        assertEq(mkr.balanceOf(address(this)), 650_000 * WAD);
-        assertEq(mkr.balanceOf(receiver),                  0);
-        assertEq(mkr.totalSupply(),            650_000 * WAD);
-        assertEq(sky.balanceOf(address(this)), 200_000 * WAD * 1200);
-        assertEq(sky.balanceOf(receiver),      150_000 * WAD * 1200);
-        assertEq(sky.totalSupply(),            350_000 * WAD * 1200);
-
-        sky.approve(address(mkrSky), 50_000 * WAD * 1200);
-        vm.expectEmit(true, true, true, true);
-        emit SkyToMkr(address(this), receiver, 50_000 * WAD * 1200, 50_000 * WAD);
-        mkrSky.skyToMkr(receiver, 50_000 * WAD * 1200);
-        assertEq(mkr.balanceOf(address(this)), 650_000 * WAD);
-        assertEq(mkr.balanceOf(receiver),       50_000 * WAD);
-        assertEq(mkr.totalSupply(),            700_000 * WAD);
-        assertEq(sky.balanceOf(address(this)), 150_000 * WAD * 1200);
-        assertEq(sky.balanceOf(receiver),      150_000 * WAD * 1200);
-        assertEq(sky.totalSupply(),            300_000 * WAD * 1200);
-
-        sky.approve(address(mkrSky), 50_000 * WAD * 1200 + 1199);
-        vm.expectEmit(true, true, true, true);
-        emit SkyToMkr(address(this), address(this), 50_000 * WAD * 1200 + 1199, 50_000 * WAD);
-        mkrSky.skyToMkr(address(this), 50_000 * WAD * 1200 + 1199);
-        assertEq(mkr.balanceOf(address(this)), 700_000 * WAD);
-        assertEq(mkr.balanceOf(receiver),       50_000 * WAD);
-        assertEq(mkr.totalSupply(),            750_000 * WAD);
-        assertEq(sky.balanceOf(address(this)), 100_000 * WAD * 1200 - 1199);
-        assertEq(sky.balanceOf(receiver),      150_000 * WAD * 1200);
-        assertEq(sky.totalSupply(),            250_000 * WAD * 1200 - 1199);
+        emit MkrToSky(address(this), address(123), 400_000 * WAD,  (400_000 - 4_000) * WAD * rate, 4_000 * WAD * rate);
+        mkrSky.mkrToSky(address(123), 400_000 * WAD);
+        assertEq(mkr.balanceOf(address(this)),   200_000 * WAD);
+        assertEq(mkr.totalSupply(),              200_000 * WAD);
+        assertEq(sky.balanceOf(address(123)),    396_000 * WAD * rate);
+        assertEq(sky.balanceOf(address(mkrSky)), 208_000 * WAD * rate);
+        assertEq(sky.totalSupply(),              1_000_000 * WAD * rate);
+        assertEq(mkrSky.take(),                  8_000 * WAD * rate);
     }
 }

@@ -21,22 +21,16 @@ import { ScriptTools } from "dss-test/ScriptTools.sol";
 import { Sky } from "src/Sky.sol";
 import { MkrSky } from "src/MkrSky.sol";
 
-import { SkyInstance } from "./SkyInstance.sol";
-
 library SkyDeploy {
-    function deploy(
+    function deployMkrSky(
         address deployer,
         address owner,
         address mkr,
+        address sky,
         uint256 rate
-    ) internal returns (SkyInstance memory instance) {
-        address _sky = address(new Sky());
-        ScriptTools.switchOwner(_sky, deployer, owner);
-
-        address _mkrSky = address(new MkrSky(mkr, _sky, rate));
-
-        instance.sky    = _sky;
-        instance.mkrSky = _mkrSky;
+    ) internal returns (address mkrSky) {
+        mkrSky = address(new MkrSky(mkr, sky, rate));
+        ScriptTools.switchOwner(mkrSky, deployer, owner);
     }
 
     function deployL2(

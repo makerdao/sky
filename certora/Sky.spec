@@ -34,35 +34,79 @@ hook Sstore balanceOf[KEY address a] uint256 balance (uint256 old_balance) {
 
 invariant balanceSum_equals_totalSupply() balanceSum() == to_mathint(totalSupply());
 
+// Verify no more entry points exist
+rule entryPoints(method f) filtered { f -> !f.isView } {
+    env e;
+
+    calldataarg args;
+    f(e, args);
+
+    assert f.selector == sig:rely(address).selector ||
+           f.selector == sig:deny(address).selector ||
+           f.selector == sig:transfer(address,uint256).selector ||
+           f.selector == sig:transferFrom(address,address,uint256).selector ||
+           f.selector == sig:approve(address,uint256).selector ||
+           f.selector == sig:mint(address,uint256).selector ||
+           f.selector == sig:burn(address,uint256).selector ||
+           f.selector == sig:permit(address,address,uint256,uint256,bytes).selector ||
+           f.selector == sig:permit(address,address,uint256,uint256,uint8,bytes32,bytes32).selector;
+}
+
+// Verify that each storage layout is only modified in the corresponding functions
+rule storageAffected(method f) {
+    env e;
+
+    address anyAddr;
+    address anyAddr2;
+
+    mathint wardsBefore = wards(anyAddr);
+    mathint totalSupplyBefore = totalSupply();
+    mathint balanceOfBefore = balanceOf(anyAddr);
+    mathint allowanceBefore = allowance(anyAddr, anyAddr2);
+    mathint noncesBefore = nonces(anyAddr);
+
+    calldataarg args;
+    f(e, args);
+
+    mathint wardsAfter = wards(anyAddr);
+    mathint totalSupplyAfter = totalSupply();
+    mathint balanceOfAfter = balanceOf(anyAddr);
+    mathint allowanceAfter = allowance(anyAddr, anyAddr2);
+    mathint noncesAfter = nonces(anyAddr);
+
+    assert wardsAfter != wardsBefore             => f.selector == sig:rely(address).selector ||
+                                                    f.selector == sig:deny(address).selector, "Assert 1";
+    assert totalSupplyAfter != totalSupplyBefore => f.selector == sig:mint(address,uint256).selector ||
+                                                    f.selector == sig:burn(address,uint256).selector, "Assert 2";
+    assert balanceOfAfter != balanceOfBefore     => f.selector == sig:mint(address,uint256).selector ||
+                                                    f.selector == sig:burn(address,uint256).selector ||
+                                                    f.selector == sig:transfer(address,uint256).selector ||
+                                                    f.selector == sig:transferFrom(address,address,uint256).selector, "Assert 3";
+    assert allowanceAfter != allowanceBefore     => f.selector == sig:approve(address,uint256).selector ||
+                                                    f.selector == sig:transferFrom(address,address,uint256).selector ||
+                                                    f.selector == sig:burn(address,uint256).selector ||
+                                                    f.selector == sig:permit(address,address,uint256,uint256,bytes).selector ||
+                                                    f.selector == sig:permit(address,address,uint256,uint256,uint8,bytes32,bytes32).selector, "Assert 4";
+    assert noncesAfter != noncesBefore           => f.selector == sig:permit(address,address,uint256,uint256,bytes).selector ||
+                                                    f.selector == sig:permit(address,address,uint256,uint256,uint8,bytes32,bytes32).selector, "Assert 5";
+}
+
 // Verify correct storage changes for non reverting rely
 rule rely(address usr) {
     env e;
 
     address other;
     require other != usr;
-    address anyUsr; address anyUsr2;
 
     mathint wardsOtherBefore = wards(other);
-    mathint totalSupplyBefore = totalSupply();
-    mathint balanceOfBefore = balanceOf(anyUsr);
-    mathint allowanceBefore = allowance(anyUsr, anyUsr2);
-    mathint noncesBefore = nonces(anyUsr);
 
     rely(e, usr);
 
     mathint wardsUsrAfter = wards(usr);
     mathint wardsOtherAfter = wards(other);
-    mathint totalSupplyAfter = totalSupply();
-    mathint balanceOfAfter = balanceOf(anyUsr);
-    mathint allowanceAfter = allowance(anyUsr, anyUsr2);
-    mathint noncesAfter = nonces(anyUsr);
 
-    assert wardsUsrAfter == 1, "rely did not set the wards";
-    assert wardsOtherAfter == wardsOtherBefore, "rely did not keep unchanged the rest of wards[x]";
-    assert totalSupplyAfter == totalSupplyBefore, "rely did not keep unchanged totalSupply";
-    assert balanceOfAfter == balanceOfBefore, "rely did not keep unchanged every balanceOf[x]";
-    assert allowanceAfter == allowanceBefore, "rely did not keep unchanged every allowance[x][y]";
-    assert noncesAfter == noncesBefore, "rely did not keep unchanged every nonces[x]";
+    assert wardsUsrAfter == 1, "Assert 1";
+    assert wardsOtherAfter == wardsOtherBefore, "Assert 2";
 }
 
 // Verify revert rules on rely
@@ -76,9 +120,7 @@ rule rely_revert(address usr) {
     bool revert1 = e.msg.value > 0;
     bool revert2 = wardsSender != 1;
 
-    assert revert1 => lastReverted, "revert1 failed";
-    assert revert2 => lastReverted, "revert2 failed";
-    assert lastReverted => revert1 || revert2, "Revert rules are not covering all the cases";
+    assert lastReverted <=> revert1 || revert2, "Revert rules failed";
 }
 
 // Verify correct storage changes for non reverting deny
@@ -87,29 +129,16 @@ rule deny(address usr) {
 
     address other;
     require other != usr;
-    address anyUsr; address anyUsr2;
 
     mathint wardsOtherBefore = wards(other);
-    mathint totalSupplyBefore = totalSupply();
-    mathint balanceOfBefore = balanceOf(anyUsr);
-    mathint allowanceBefore = allowance(anyUsr, anyUsr2);
-    mathint noncesBefore = nonces(anyUsr);
 
     deny(e, usr);
 
     mathint wardsUsrAfter = wards(usr);
     mathint wardsOtherAfter = wards(other);
-    mathint totalSupplyAfter = totalSupply();
-    mathint balanceOfAfter = balanceOf(anyUsr);
-    mathint allowanceAfter = allowance(anyUsr, anyUsr2);
-    mathint noncesAfter = nonces(anyUsr);
 
-    assert wardsUsrAfter == 0, "deny did not set the wards";
-    assert wardsOtherAfter == wardsOtherBefore, "deny did not keep unchanged the rest of wards[x]";
-    assert totalSupplyAfter == totalSupplyBefore, "deny did not keep unchanged totalSupply";
-    assert balanceOfAfter == balanceOfBefore, "deny did not keep unchanged every balanceOf[x]";
-    assert allowanceAfter == allowanceBefore, "deny did not keep unchanged every allowance[x][y]";
-    assert noncesAfter == noncesBefore, "deny did not keep unchanged every nonces[x]";
+    assert wardsUsrAfter == 0, "Assert 1";
+    assert wardsOtherAfter == wardsOtherBefore, "Assert 2";
 }
 
 // Verify revert rules on deny
@@ -123,9 +152,7 @@ rule deny_revert(address usr) {
     bool revert1 = e.msg.value > 0;
     bool revert2 = wardsSender != 1;
 
-    assert revert1 => lastReverted, "revert1 failed";
-    assert revert2 => lastReverted, "revert2 failed";
-    assert lastReverted => revert1 || revert2, "Revert rules are not covering all the cases";
+    assert lastReverted <=> revert1 || revert2, "Revert rules failed";
 }
 
 // Verify correct storage changes for non reverting transfer
@@ -136,34 +163,21 @@ rule transfer(address to, uint256 value) {
 
     address other;
     require other != e.msg.sender && other != to;
-    address anyUsr; address anyUsr2;
 
-    mathint wardsBefore = wards(anyUsr);
-    mathint totalSupplyBefore = totalSupply();
     mathint balanceOfSenderBefore = balanceOf(e.msg.sender);
     mathint balanceOfToBefore = balanceOf(to);
     mathint balanceOfOtherBefore = balanceOf(other);
-    mathint allowanceBefore = allowance(anyUsr, anyUsr2);
-    mathint noncesBefore = nonces(anyUsr);
 
     transfer(e, to, value);
 
-    mathint wardsAfter = wards(anyUsr);
-    mathint totalSupplyAfter = totalSupply();
     mathint balanceOfSenderAfter = balanceOf(e.msg.sender);
     mathint balanceOfToAfter = balanceOf(to);
     mathint balanceOfOtherAfter = balanceOf(other);
-    mathint allowanceAfter = allowance(anyUsr, anyUsr2);
-    mathint noncesAfter = nonces(anyUsr);
 
-    assert wardsAfter == wardsBefore, "transfer did not keep unchanged wards";
-    assert totalSupplyAfter == totalSupplyBefore, "transfer did not keep unchanged totalSupply";
-    assert e.msg.sender != to => balanceOfSenderAfter == balanceOfSenderBefore - value, "transfer did not decrease balanceOf[sender] by value";
-    assert e.msg.sender != to => balanceOfToAfter == balanceOfToBefore + value, "transfer did not increase balanceOf[to] by value";
-    assert e.msg.sender == to => balanceOfSenderAfter == balanceOfSenderBefore, "transfer did not keep unchanged balanceOf[sender == to]";
-    assert balanceOfOtherAfter == balanceOfOtherBefore, "transfer did not keep unchanged the rest of balanceOf[x]";
-    assert allowanceAfter == allowanceBefore, "transfer did not keep unchanged every allowance[x][y]";
-    assert noncesAfter == noncesBefore, "transfer did not keep unchanged every nonces[x]";
+    assert e.msg.sender != to => balanceOfSenderAfter == balanceOfSenderBefore - value, "Assert 1";
+    assert e.msg.sender != to => balanceOfToAfter == balanceOfToBefore + value, "Assert 2";
+    assert e.msg.sender == to => balanceOfSenderAfter == balanceOfSenderBefore, "Assert 3";
+    assert balanceOfOtherAfter == balanceOfOtherBefore, "Assert 4";
 }
 
 // Verify revert rules on transfer
@@ -178,10 +192,7 @@ rule transfer_revert(address to, uint256 value) {
     bool revert2 = to == 0 || to == currentContract;
     bool revert3 = balanceOfSender < to_mathint(value);
 
-    assert revert1 => lastReverted, "revert1 failed";
-    assert revert2 => lastReverted, "revert2 failed";
-    assert revert3 => lastReverted, "revert3 failed";
-    assert lastReverted => revert1 || revert2 || revert3, "Revert rules are not covering all the cases";
+    assert lastReverted <=> revert1 || revert2 || revert3, "Revert rules failed";
 }
 
 // Verify correct storage changes for non reverting transferFrom
@@ -194,39 +205,30 @@ rule transferFrom(address from, address to, uint256 value) {
     require other != from && other != to;
     address other2; address other3;
     require other2 != from || other3 != e.msg.sender;
-    address anyUsr; address anyUsr2;
 
-    mathint wardsBefore = wards(anyUsr);
     mathint totalSupplyBefore = totalSupply();
     mathint balanceOfFromBefore = balanceOf(from);
     mathint balanceOfToBefore = balanceOf(to);
     mathint balanceOfOtherBefore = balanceOf(other);
     mathint allowanceFromSenderBefore = allowance(from, e.msg.sender);
     mathint allowanceOtherBefore = allowance(other2, other3);
-    mathint noncesBefore = nonces(anyUsr);
 
     transferFrom(e, from, to, value);
 
-    mathint wardsAfter = wards(anyUsr);
-    mathint totalSupplyAfter = totalSupply();
     mathint balanceOfFromAfter = balanceOf(from);
     mathint balanceOfToAfter = balanceOf(to);
     mathint balanceOfOtherAfter = balanceOf(other);
     mathint allowanceFromSenderAfter = allowance(from, e.msg.sender);
     mathint allowanceOtherAfter = allowance(other2, other3);
-    mathint noncesAfter = nonces(anyUsr);
 
-    assert wardsAfter == wardsBefore, "transferFrom did not keep unchanged wards";
-    assert totalSupplyAfter == totalSupplyBefore, "transferFrom did not keep unchanged totalSupply";
-    assert from != to => balanceOfFromAfter == balanceOfFromBefore - value, "transferFrom did not decrease balanceOf[from] by value";
-    assert from != to => balanceOfToAfter == balanceOfToBefore + value, "transferFrom did not increase balanceOf[to] by value";
-    assert from == to => balanceOfFromAfter == balanceOfFromBefore, "transferFrom did not keep unchanged balanceOf[from == to]";
-    assert balanceOfOtherAfter == balanceOfOtherBefore, "transferFrom did not keep unchanged the rest of balanceOf[x]";
-    assert e.msg.sender != from && allowanceFromSenderBefore != max_uint256 => allowanceFromSenderAfter == allowanceFromSenderBefore - value, "transferFrom did not decrease allowance[from][sender] by value";
-    assert e.msg.sender == from => allowanceFromSenderAfter == allowanceFromSenderBefore, "transferFrom did not keep unchanged allowance[from][sender] when from == sender";
-    assert allowanceFromSenderBefore == max_uint256 => allowanceFromSenderAfter == allowanceFromSenderBefore, "transferFrom did not keep unchanged allowance[from][sender] when is max_uint256";
-    assert allowanceOtherAfter == allowanceOtherBefore, "transferFrom did not keep unchanged the rest of allowance[x][y]";
-    assert noncesAfter == noncesBefore, "transferFrom did not keep unchanged every nonces[x]";
+    assert from != to => balanceOfFromAfter == balanceOfFromBefore - value, "Assert 1";
+    assert from != to => balanceOfToAfter == balanceOfToBefore + value, "Assert 2";
+    assert from == to => balanceOfFromAfter == balanceOfFromBefore, "Assert 3";
+    assert balanceOfOtherAfter == balanceOfOtherBefore, "Assert 4";
+    assert e.msg.sender != from && allowanceFromSenderBefore != max_uint256 => allowanceFromSenderAfter == allowanceFromSenderBefore - value, "Assert 5";
+    assert e.msg.sender == from => allowanceFromSenderAfter == allowanceFromSenderBefore, "Assert 6";
+    assert allowanceFromSenderBefore == max_uint256 => allowanceFromSenderAfter == allowanceFromSenderBefore, "Assert 7";
+    assert allowanceOtherAfter == allowanceOtherBefore, "Assert 8";
 }
 
 // Verify revert rules on transferFrom
@@ -243,42 +245,25 @@ rule transferFrom_revert(address from, address to, uint256 value) {
     bool revert3 = balanceOfFrom < to_mathint(value);
     bool revert4 = allowanceFromSender < to_mathint(value) && e.msg.sender != from;
 
-    assert revert1 => lastReverted, "revert1 failed";
-    assert revert2 => lastReverted, "revert2 failed";
-    assert revert3 => lastReverted, "revert3 failed";
-    assert revert4 => lastReverted, "revert4 failed";
-    assert lastReverted => revert1 || revert2 || revert3 || revert4, "Revert rules are not covering all the cases";
+    assert lastReverted <=> revert1 || revert2 || revert3 || revert4, "Revert rules failed";
 }
 
 // Verify correct storage changes for non reverting approve
 rule approve(address spender, uint256 value) {
     env e;
 
-    address anyUsr;
-    address anyUsr2; address anyUsr3;
-    require anyUsr2 != e.msg.sender || anyUsr3 != spender;
+    address anyUsr; address anyUsr2;
+    require anyUsr != e.msg.sender || anyUsr2 != spender;
 
-    mathint wardsBefore = wards(anyUsr);
-    mathint totalSupplyBefore = totalSupply();
-    mathint balanceOfBefore = balanceOf(anyUsr);
-    mathint allowanceOtherBefore = allowance(anyUsr2, anyUsr3);
-    mathint noncesBefore = nonces(anyUsr);
+    mathint allowanceOtherBefore = allowance(anyUsr, anyUsr2);
 
     approve(e, spender, value);
 
-    mathint wardsAfter = wards(anyUsr);
-    mathint totalSupplyAfter = totalSupply();
-    mathint balanceOfAfter = balanceOf(anyUsr);
     mathint allowanceSenderSpenderAfter = allowance(e.msg.sender, spender);
-    mathint allowanceOtherAfter = allowance(anyUsr2, anyUsr3);
-    mathint noncesAfter = nonces(anyUsr);
+    mathint allowanceOtherAfter = allowance(anyUsr, anyUsr2);
 
-    assert wardsAfter == wardsBefore, "approve did not keep unchanged wards";
-    assert totalSupplyAfter == totalSupplyBefore, "approve did not keep unchanged totalSupply";
-    assert balanceOfAfter == balanceOfBefore, "approve did not keep unchanged every balanceOf[x]";
-    assert allowanceSenderSpenderAfter == to_mathint(value), "approve did not set allowance[sender][spender] to value";
-    assert allowanceOtherAfter == allowanceOtherBefore, "approve did not keep unchanged the rest of allowance[x][y]";
-    assert noncesAfter == noncesBefore, "approve did not keep unchanged every nonces[x]";
+    assert allowanceSenderSpenderAfter == to_mathint(value), "Assert 1";
+    assert allowanceOtherAfter == allowanceOtherBefore, "Assert 2";
 }
 
 // Verify revert rules on approve
@@ -289,8 +274,7 @@ rule approve_revert(address spender, uint256 value) {
 
     bool revert1 = e.msg.value > 0;
 
-    assert revert1 => lastReverted, "revert1 failed";
-    assert lastReverted => revert1, "Revert rules are not covering all the cases";
+    assert lastReverted <=> revert1, "Revert rules failed";
 }
 
 // Verify correct storage changes for non reverting mint
@@ -305,28 +289,19 @@ rule mint(address to, uint256 value) {
 
     bool senderSameAsTo = e.msg.sender == to;
 
-    mathint wardsBefore = wards(anyUsr);
     mathint totalSupplyBefore = totalSupply();
     mathint balanceOfToBefore = balanceOf(to);
     mathint balanceOfOtherBefore = balanceOf(other);
-    mathint allowanceBefore = allowance(anyUsr, anyUsr2);
-    mathint noncesBefore = nonces(anyUsr);
 
     mint(e, to, value);
 
-    mathint wardsAfter = wards(anyUsr);
     mathint totalSupplyAfter = totalSupply();
     mathint balanceOfToAfter = balanceOf(to);
     mathint balanceOfOtherAfter = balanceOf(other);
-    mathint allowanceAfter = allowance(anyUsr, anyUsr2);
-    mathint noncesAfter = nonces(anyUsr);
 
-    assert wardsAfter == wardsBefore, "mint did not keep unchanged wards";
-    assert totalSupplyAfter == totalSupplyBefore + value, "mint did not increase totalSupply by value";
-    assert balanceOfToAfter == balanceOfToBefore + value, "mint did not increase balanceOf[to] by value";
-    assert balanceOfOtherAfter == balanceOfOtherBefore, "mint did not keep unchanged the rest of balanceOf[x]";
-    assert allowanceAfter == allowanceBefore, "mint did not keep unchanged every allowance[x][y]";
-    assert noncesAfter == noncesBefore, "mint did not keep unchanged every nonces[x]";
+    assert totalSupplyAfter == totalSupplyBefore + value, "Assert 1";
+    assert balanceOfToAfter == balanceOfToBefore + value, "Assert 2";
+    assert balanceOfOtherAfter == balanceOfOtherBefore, "Assert 3";
 }
 
 // Verify revert rules on mint
@@ -344,11 +319,7 @@ rule mint_revert(address to, uint256 value) {
     bool revert3 = totalSupply + value > max_uint256;
     bool revert4 = to == 0 || to == currentContract;
 
-    assert revert1 => lastReverted, "revert1 failed";
-    assert revert2 => lastReverted, "revert2 failed";
-    assert revert3 => lastReverted, "revert3 failed";
-    assert revert4 => lastReverted, "revert4 failed";
-    assert lastReverted => revert1 || revert2 || revert3 || revert4, "Revert rules are not covering all the cases";
+    assert lastReverted <=> revert1 || revert2 || revert3 || revert4, "Revert rules failed";
 }
 
 // Verify correct storage changes for non reverting burn
@@ -362,34 +333,28 @@ rule burn(address from, uint256 value) {
     address anyUsr; address anyUsr2;
     require anyUsr != from || anyUsr2 != e.msg.sender;
 
-    mathint wardsBefore = wards(anyUsr);
     mathint totalSupplyBefore = totalSupply();
     mathint balanceOfFromBefore = balanceOf(from);
     mathint balanceOfOtherBefore = balanceOf(other);
     mathint allowanceFromSenderBefore = allowance(from, e.msg.sender);
     mathint allowanceOtherBefore = allowance(anyUsr, anyUsr2);
-    mathint noncesBefore = nonces(anyUsr);
 
     burn(e, from, value);
 
-    mathint wardsAfter = wards(anyUsr);
     mathint totalSupplyAfter = totalSupply();
     mathint balanceOfSenderAfter = balanceOf(e.msg.sender);
     mathint balanceOfFromAfter = balanceOf(from);
     mathint balanceOfOtherAfter = balanceOf(other);
     mathint allowanceFromSenderAfter = allowance(from, e.msg.sender);
     mathint allowanceOtherAfter = allowance(anyUsr, anyUsr2);
-    mathint noncesAfter = nonces(anyUsr);
 
-    assert wardsAfter == wardsBefore, "burn did not keep unchanged wards";
-    assert totalSupplyAfter == totalSupplyBefore - value, "burn did not decrease totalSupply by value";
-    assert balanceOfFromAfter == balanceOfFromBefore - value, "burn did not decrease balanceOf[from] by value";
-    assert balanceOfOtherAfter == balanceOfOtherBefore, "burn did not keep unchanged the rest of balanceOf[x]";
-    assert e.msg.sender != from && allowanceFromSenderBefore != max_uint256 => allowanceFromSenderAfter == allowanceFromSenderBefore - value, "burn did not decrease allowance[from][sender] by value";
-    assert e.msg.sender == from => allowanceFromSenderAfter == allowanceFromSenderBefore, "burn did not keep unchanged allowance[from][sender] when from == sender";
-    assert allowanceFromSenderBefore == max_uint256 => allowanceFromSenderAfter == allowanceFromSenderBefore, "burn did not keep unchanged allowance[from][sender] when is max_uint256";
-    assert allowanceOtherAfter == allowanceOtherBefore, "burn did not keep unchanged the rest of allowance[x][y]";
-    assert noncesAfter == noncesBefore, "burn did not keep unchanged every nonces[x]";
+    assert totalSupplyAfter == totalSupplyBefore - value, "Assert 1";
+    assert balanceOfFromAfter == balanceOfFromBefore - value, "Assert 2";
+    assert balanceOfOtherAfter == balanceOfOtherBefore, "Assert 3";
+    assert e.msg.sender != from && allowanceFromSenderBefore != max_uint256 => allowanceFromSenderAfter == allowanceFromSenderBefore - value, "Assert 4";
+    assert e.msg.sender == from => allowanceFromSenderAfter == allowanceFromSenderBefore, "Assert 5";
+    assert allowanceFromSenderBefore == max_uint256 => allowanceFromSenderAfter == allowanceFromSenderBefore, "Assert 6";
+    assert allowanceOtherAfter == allowanceOtherBefore, "Assert 7";
 }
 
 // Verify revert rules on burn
@@ -405,47 +370,34 @@ rule burn_revert(address from, uint256 value) {
     bool revert2 = balanceOfFrom < to_mathint(value);
     bool revert3 = from != e.msg.sender && allowanceFromSender < to_mathint(value);
 
-    assert revert1 => lastReverted, "revert1 failed";
-    assert revert2 => lastReverted, "revert2 failed";
-    assert revert3 => lastReverted, "revert3 failed";
-    assert lastReverted => revert1 || revert2 || revert3, "Revert rules are not covering all the cases";
+    assert lastReverted <=> revert1 || revert2 || revert3, "Revert rules failed";
 }
 
 // Verify correct storage changes for non reverting permit
 rule permitVRS(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) {
     env e;
 
-    address anyUsr;
-    address anyUsr2; address anyUsr3;
-    require anyUsr2 != owner || anyUsr3 != spender;
+    address anyUsr; address anyUsr2;
+    require anyUsr != owner || anyUsr2 != spender;
     address other;
     require other != owner;
 
-    mathint wardsBefore = wards(anyUsr);
-    mathint totalSupplyBefore = totalSupply();
-    mathint balanceOfBefore = balanceOf(anyUsr);
-    mathint allowanceOtherBefore = allowance(anyUsr2, anyUsr3);
+    mathint allowanceOtherBefore = allowance(anyUsr, anyUsr2);
     mathint noncesOwnerBefore = nonces(owner);
     mathint noncesOtherBefore = nonces(other);
 
     permit(e, owner, spender, value, deadline, v, r, s);
 
-    mathint wardsAfter = wards(anyUsr);
-    mathint totalSupplyAfter = totalSupply();
-    mathint balanceOfAfter = balanceOf(anyUsr);
     mathint allowanceOwnerSpenderAfter = allowance(owner, spender);
-    mathint allowanceOtherAfter = allowance(anyUsr2, anyUsr3);
+    mathint allowanceOtherAfter = allowance(anyUsr, anyUsr2);
     mathint noncesOwnerAfter = nonces(owner);
     mathint noncesOtherAfter = nonces(other);
 
-    assert wardsAfter == wardsBefore, "permit did not keep unchanged wards";
-    assert totalSupplyAfter == totalSupplyBefore, "permit did not keep unchanged totalSupply";
-    assert balanceOfAfter == balanceOfBefore, "permit did not keep unchanged every balanceOf[x]";
-    assert allowanceOwnerSpenderAfter == to_mathint(value), "permit did not set allowance[owner][spender] to value";
-    assert allowanceOtherAfter == allowanceOtherBefore, "permit did not keep unchanged the rest of allowance[x][y]";
-    assert noncesOwnerBefore < max_uint256 => noncesOwnerAfter == noncesOwnerBefore + 1, "permit did not increase nonces[owner] by 1";
-    assert noncesOwnerBefore == max_uint256 => noncesOwnerAfter == 0, "permit did not set nonces[owner] back to 0";
-    assert noncesOtherAfter == noncesOtherBefore, "permit did not keep unchanged the rest of nonces[x]";
+    assert allowanceOwnerSpenderAfter == to_mathint(value), "Assert 1";
+    assert allowanceOtherAfter == allowanceOtherBefore, "Assert 2";
+    assert noncesOwnerBefore < max_uint256 => noncesOwnerAfter == noncesOwnerBefore + 1, "Assert 3";
+    assert noncesOwnerBefore == max_uint256 => noncesOwnerAfter == 0, "Assert 4";
+    assert noncesOtherAfter == noncesOtherBefore, "Assert 5";
 }
 
 // Verify revert rules on permit
@@ -471,50 +423,35 @@ rule permitVRS_revert(address owner, address spender, uint256 value, uint256 dea
     bool revert3 = owner == 0;
     bool revert4 = owner != ownerRecover && returnedSig != to_bytes32(0x1626ba7e00000000000000000000000000000000000000000000000000000000);
 
-    assert revert1 => lastReverted, "revert1 failed";
-    assert revert2 => lastReverted, "revert2 failed";
-    assert revert3 => lastReverted, "revert3 failed";
-    assert revert4 => lastReverted, "revert4 failed";
-
-    assert lastReverted => revert1 || revert2 || revert3 ||
-                           revert4, "Revert rules are not covering all the cases";
+    assert lastReverted <=> revert1 || revert2 || revert3 ||
+                            revert4, "Revert rules failed";
 }
 
 // Verify correct storage changes for non reverting permit
 rule permitSignature(address owner, address spender, uint256 value, uint256 deadline, bytes signature) {
     env e;
 
-    address anyUsr;
-    address anyUsr2; address anyUsr3;
-    require anyUsr2 != owner || anyUsr3 != spender;
+    address anyUsr; address anyUsr2;
+    require anyUsr != owner || anyUsr2 != spender;
     address other;
     require other != owner;
 
-    mathint wardsBefore = wards(anyUsr);
-    mathint totalSupplyBefore = totalSupply();
-    mathint balanceOfBefore = balanceOf(anyUsr);
-    mathint allowanceOtherBefore = allowance(anyUsr2, anyUsr3);
+    mathint allowanceOtherBefore = allowance(anyUsr, anyUsr2);
     mathint noncesOwnerBefore = nonces(owner);
     mathint noncesOtherBefore = nonces(other);
 
     permit(e, owner, spender, value, deadline, signature);
 
-    mathint wardsAfter = wards(anyUsr);
-    mathint totalSupplyAfter = totalSupply();
-    mathint balanceOfAfter = balanceOf(anyUsr);
     mathint allowanceOwnerSpenderAfter = allowance(owner, spender);
-    mathint allowanceOtherAfter = allowance(anyUsr2, anyUsr3);
+    mathint allowanceOtherAfter = allowance(anyUsr, anyUsr2);
     mathint noncesOwnerAfter = nonces(owner);
     mathint noncesOtherAfter = nonces(other);
 
-    assert wardsAfter == wardsBefore, "permit did not keep unchanged wards";
-    assert totalSupplyAfter == totalSupplyBefore, "permit did not keep unchanged totalSupply";
-    assert balanceOfAfter == balanceOfBefore, "permit did not keep unchanged every balanceOf[x]";
-    assert allowanceOwnerSpenderAfter == to_mathint(value), "permit did not set allowance[owner][spender] to value";
-    assert allowanceOtherAfter == allowanceOtherBefore, "permit did not keep unchanged the rest of allowance[x][y]";
-    assert noncesOwnerBefore < max_uint256 => noncesOwnerAfter == noncesOwnerBefore + 1, "permit did not increase nonces[owner] by 1";
-    assert noncesOwnerBefore == max_uint256 => noncesOwnerAfter == 0, "permit did not set nonces[owner] back to 0";
-    assert noncesOtherAfter == noncesOtherBefore, "permit did not keep unchanged the rest of nonces[x]";
+    assert allowanceOwnerSpenderAfter == to_mathint(value), "Assert 1";
+    assert allowanceOtherAfter == allowanceOtherBefore, "Assert 2";
+    assert noncesOwnerBefore < max_uint256 => noncesOwnerAfter == noncesOwnerBefore + 1, "Assert 3";
+    assert noncesOwnerBefore == max_uint256 => noncesOwnerAfter == 0, "Assert 4";
+    assert noncesOtherAfter == noncesOtherBefore, "Assert 5";
 }
 
 // Verify revert rules on permit
@@ -543,11 +480,6 @@ rule permitSignature_revert(address owner, address spender, uint256 value, uint2
     bool revert3 = owner == 0;
     bool revert4 = owner != ownerRecover && returnedSig != to_bytes32(0x1626ba7e00000000000000000000000000000000000000000000000000000000);
 
-    assert revert1 => lastReverted, "revert1 failed";
-    assert revert2 => lastReverted, "revert2 failed";
-    assert revert3 => lastReverted, "revert3 failed";
-    assert revert4 => lastReverted, "revert4 failed";
-
-    assert lastReverted => revert1 || revert2 || revert3 ||
-                           revert4, "Revert rules are not covering all the cases";
+    assert lastReverted <=> revert1 || revert2 || revert3 ||
+                            revert4, "Revert rules failed";
 }
