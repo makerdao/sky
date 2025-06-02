@@ -51,7 +51,7 @@ contract DeploymentTest is DssTest {
     address SKY;
 
     function setUp() public {
-        vm.createSelectFork(vm.envString("ETH_RPC_URL"));
+        vm.createSelectFork(vm.envString("ETH_RPC_URL"), 22517470);
 
         PAUSE_PROXY = ChainlogLike(LOG).getAddress("MCD_PAUSE_PROXY");
         MKR         = ChainlogLike(LOG).getAddress("MCD_GOV");
