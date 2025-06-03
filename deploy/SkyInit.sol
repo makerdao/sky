@@ -19,13 +19,16 @@ pragma solidity >=0.8.0;
 import { DssInstance } from "dss-test/MCD.sol";
 
 interface SkyLike {
+    function balanceOf(address) external view returns (uint256);
     function mint(address, uint256) external;
+    function deny(address) external;
 }
 
 interface MkrSkyLike {
     function mkr() external view returns (address);
     function sky() external view returns (address);
     function rate() external view returns (uint256);
+    function burn(uint256) external;
 }
 
 interface MkrLike {
@@ -61,5 +64,26 @@ library SkyInit {
 
         dss.chainlog.setAddress("MKR_SKY_LEGACY", oldMkrSky);
         dss.chainlog.setAddress("MKR_SKY", mkrSky);
+    }
+
+    function disableOldConverterMkrSky (DssInstance memory dss) internal {
+        MkrSkyLike oldMkrSky = MkrSkyLike(dss.chainlog.getAddress("MKR_SKY_LEGACY"));
+        SkyLike sky = SkyLike(oldMkrSky.sky());
+
+        sky.deny(address(oldMkrSky));
+        dss.chainlog.removeAddress("MKR_SKY_LEGACY");
+    }
+
+    // Right after pre-minting we had `converter SKY balance` equal to `MKR supply * 24K`.
+    // As planned (see README), later old converter MKR=>SKY ops reduced MKR supply without reducing converter balance (as SKY was minted instead).
+    // Therefore, the extra SKY to be burned is the difference between the two amounts (disregarding donations, which we don't care about burning).
+    // We also assume the conversion penalty fee was always 0.
+    function burnExtraSky(DssInstance memory dss) internal {
+        MkrSkyLike mkrSky = MkrSkyLike(dss.chainlog.getAddress("MKR_SKY"));
+        SkyLike sky = SkyLike(mkrSky.sky());
+        MkrLike mkr = MkrLike(mkrSky.mkr());
+        uint256 rate = mkrSky.rate();
+
+        mkrSky.burn(sky.balanceOf(address(mkrSky)) - mkr.totalSupply() * rate);
     }
 }
